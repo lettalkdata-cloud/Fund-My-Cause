@@ -232,6 +232,13 @@ export default function CreateCampaignPage() {
 
       const signed = await signTx(xdr);
       const hash = await submitSignedTx(signed);
+      // Register contract in dashboard registry
+      try {
+        const raw = localStorage.getItem("fmc:campaigns");
+        const map: Record<string, string[]> = raw ? JSON.parse(raw) : {};
+        map[address!] = [...new Set([...(map[address!] ?? []), data.contractId])];
+        localStorage.setItem("fmc:campaigns", JSON.stringify(map));
+      } catch { /* non-critical */ }
       setTxHash(hash);
       setTxStatus("success");
     } catch (e) {
