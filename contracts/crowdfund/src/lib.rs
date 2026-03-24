@@ -10,7 +10,7 @@ const CONTRACT_VERSION: u32 = 3;
 
 // ── Data Types ────────────────────────────────────────────────────────────────
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 #[contracttype]
 pub enum Status {
     Active,
@@ -297,6 +297,10 @@ impl CrowdfundContract {
 
     pub fn total_raised(env: Env) -> i128 {
         env.storage().instance().get(&DataKey::TotalRaised).unwrap_or(0)
+    }
+
+    pub fn status(env: Env) -> Status {
+        env.storage().instance().get(&DataKey::Status).unwrap()
     }
 
     pub fn goal(env: Env) -> i128 {
