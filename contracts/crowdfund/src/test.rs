@@ -22,7 +22,7 @@ fn test_cancel_happy_path() {
     let goal = 10000;
     let min_contribution = 100;
 
-    client.initialize(&creator, &token_id, &goal, &deadline, &min_contribution, &None);
+    client.initialize(&creator, &token_id, &goal, &deadline, &min_contribution, &String::from_str(&env, "My Title"), &String::from_str(&env, "My Description"), &None);
 
     // Some contributions
     let user1 = Address::generate(&env);
@@ -67,7 +67,7 @@ fn test_cancel_already_cancelled() {
     let contract_id = env.register_contract(None, CrowdfundContract);
     let client = CrowdfundContractClient::new(&env, &contract_id);
 
-    client.initialize(&creator, &token_id, &1000, &1000, &10, &None);
+    client.initialize(&creator, &token_id, &1000, &1000, &10, &String::from_str(&env, "My Title"), &String::from_str(&env, "My Description"), &None);
     client.cancel_campaign();
 
     let result = client.try_cancel_campaign();

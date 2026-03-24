@@ -88,6 +88,8 @@ impl CrowdfundContract {
         goal: i128,
         deadline: u64,
         min_contribution: i128,
+        title: String,
+        description: String,
         platform_config: Option<PlatformConfig>,
     ) -> Result<(), ContractError> {
         if env.storage().instance().has(&DataKey::Creator) {
@@ -107,6 +109,8 @@ impl CrowdfundContract {
         env.storage().instance().set(&DataKey::Goal, &goal);
         env.storage().instance().set(&DataKey::Deadline, &deadline);
         env.storage().instance().set(&DataKey::MinContribution, &min_contribution);
+        env.storage().instance().set(&DataKey::Title, &title);
+        env.storage().instance().set(&DataKey::Description, &description);
         env.storage().instance().set(&DataKey::TotalRaised, &0i128);
         env.storage().instance().set(&DataKey::Status, &Status::Active);
 

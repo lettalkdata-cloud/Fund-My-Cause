@@ -54,6 +54,12 @@
                     "lo": 100
                   }
                 },
+                {
+                  "string": "My Title"
+                },
+                {
+                  "string": "My Description"
+                },
                 "void"
               ]
             }
@@ -528,6 +534,18 @@
                         "key": {
                           "vec": [
                             {
+                              "symbol": "Description"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "string": "My Description"
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
                               "symbol": "Goal"
                             }
                           ]
@@ -568,6 +586,18 @@
                               "symbol": "Cancelled"
                             }
                           ]
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "Title"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "string": "My Title"
                         }
                       },
                       {
