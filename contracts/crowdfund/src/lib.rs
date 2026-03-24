@@ -71,6 +71,8 @@ pub enum ContractError {
     GoalReached = 5,
     Overflow = 6,
     NotActive = 7,
+    InvalidFee = 8,
+    BelowMinimum = 9,
 }
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -100,7 +102,7 @@ impl CrowdfundContract {
 
         if let Some(ref config) = platform_config {
             if config.fee_bps > 10_000 {
-                panic!("platform fee cannot exceed 100%");
+                return Err(ContractError::InvalidFee);
             }
             env.storage().instance().set(&DataKey::PlatformConfig, config);
         }
@@ -132,7 +134,7 @@ impl CrowdfundContract {
 
         let min: i128 = env.storage().instance().get(&DataKey::MinContribution).unwrap();
         if amount < min {
-            panic!("amount below minimum");
+            return Err(ContractError::BelowMinimum);
         }
 
         let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
