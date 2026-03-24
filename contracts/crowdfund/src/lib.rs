@@ -30,7 +30,7 @@ pub struct CampaignStats {
     pub largest_contribution: i128,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 #[contracttype]
 pub struct PlatformConfig {
     pub address: Address,
@@ -333,6 +333,10 @@ impl CrowdfundContract {
             .instance()
             .get(&DataKey::SocialLinks)
             .unwrap_or_else(|| Vec::new(&env))
+    }
+
+    pub fn platform_config(env: Env) -> Option<PlatformConfig> {
+        env.storage().instance().get(&DataKey::PlatformConfig)
     }
 
     pub fn version(_env: Env) -> u32 {
