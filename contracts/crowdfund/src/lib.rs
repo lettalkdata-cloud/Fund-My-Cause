@@ -56,6 +56,7 @@ pub enum DataKey {
     ContributorPresence(Address),
     ContributorCount,
     LargestContribution,
+    AcceptedTokens,
 }
 
 // ── Contract Errors ───────────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ pub enum ContractError {
     GoalReached = 5,
     Overflow = 6,
     NotActive = 7,
+    TokenNotAccepted = 8,
 }
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ impl CrowdfundContract {
         description: String,
         social_links: Option<Vec<String>>,
         platform_config: Option<PlatformConfig>,
+        accepted_tokens: Option<Vec<Address>>,
     ) -> Result<(), ContractError> {
         if env.storage().instance().has(&DataKey::Creator) {
             return Err(ContractError::AlreadyInitialized);
@@ -124,11 +127,15 @@ impl CrowdfundContract {
         env.storage().instance().set(&DataKey::ContributorCount, &0u32);
         env.storage().instance().set(&DataKey::LargestContribution, &0i128);
 
+        if let Some(tokens) = accepted_tokens {
+            env.storage().instance().set(&DataKey::AcceptedTokens, &tokens);
+        }
+
         Ok(())
     }
 
     /// Contribute tokens to the campaign.
-    pub fn contribute(env: Env, contributor: Address, amount: i128) -> Result<(), ContractError> {
+    pub fn contribute(env: Env, contributor: Address, amount: i128, token: Address) -> Result<(), ContractError> {
         contributor.require_auth();
 
         let min: i128 = env.storage().instance().get(&DataKey::MinContribution).unwrap();
@@ -146,8 +153,17 @@ impl CrowdfundContract {
             return Err(ContractError::CampaignEnded);
         }
 
-        let token_address: Address = env.storage().instance().get(&DataKey::Token).unwrap();
-        token::Client::new(&env, &token_address)
+        // Validate token against whitelist if one is set, otherwise fall back to default token
+        let default_token: Address = env.storage().instance().get(&DataKey::Token).unwrap();
+        if let Some(whitelist) = env.storage().instance().get::<_, Vec<Address>>(&DataKey::AcceptedTokens) {
+            if !whitelist.contains(&token) {
+                return Err(ContractError::TokenNotAccepted);
+            }
+        } else if token != default_token {
+            return Err(ContractError::TokenNotAccepted);
+        }
+
+        token::Client::new(&env, &token)
             .transfer(&contributor, &env.current_contract_address(), &amount);
 
         let key = DataKey::Contribution(contributor.clone());
@@ -336,6 +352,13 @@ impl CrowdfundContract {
         env.storage()
             .instance()
             .get(&DataKey::SocialLinks)
+            .unwrap_or_else(|| Vec::new(&env))
+    }
+
+    pub fn accepted_tokens(env: Env) -> Vec<Address> {
+        env.storage()
+            .instance()
+            .get(&DataKey::AcceptedTokens)
             .unwrap_or_else(|| Vec::new(&env))
     }
 
