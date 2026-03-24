@@ -314,11 +314,12 @@ impl CrowdfundContract {
             .unwrap_or(0)
     }
 
-    pub fn is_contributor(env: Env, contributor: Address) -> bool {
+    pub fn is_contributor(env: Env, address: Address) -> bool {
         env.storage()
             .persistent()
-            .get(&DataKey::Contribution(contributor))
-            .unwrap_or(0) > 0
+            .get::<_, i128>(&DataKey::Contribution(address))
+            .unwrap_or(0)
+            > 0
     }
 
     pub fn min_contribution(env: Env) -> i128 {
