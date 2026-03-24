@@ -470,6 +470,60 @@ impl CrowdfundContract {
             platform_address,
         }
     }
+
+    /// Returns a paginated slice of contributors.
+    /// 
+    /// This function provides efficient access to the contributors list without
+    /// hitting execution limits for large campaigns. The limit is capped at 50
+    /// to prevent excessive gas consumption.
+    /// 
+    /// # Arguments
+    /// * `offset` - Starting index in the contributors vector (0-based)
+    /// * `limit` - Maximum number of contributors to return (capped at 50)
+    /// 
+    /// # Returns
+    /// A vector containing up to `limit` contributor addresses starting from `offset`.
+    /// Returns an empty vector if offset is beyond the list length.
+    /// 
+    /// # Example
+    /// ```
+    /// // Get first 50 contributors
+    /// let page1 = contributor_list(env, 0, 50);
+    /// // Get next 50 contributors
+    /// let page2 = contributor_list(env, 50, 50);
+    /// ```
+    pub fn contributor_list(env: Env, offset: u32, limit: u32) -> Vec<Address> {
+        let contributors: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Contributors)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        let total_count = contributors.len();
+        
+        // Return empty vector if offset is beyond the list
+        if offset >= total_count {
+            return Vec::new(&env);
+        }
+
+        // Cap limit at 50 to prevent excessive gas consumption
+        let capped_limit = if limit > 50 { 50 } else { limit };
+        
+        // Calculate the end index (exclusive)
+        let end = if offset + capped_limit > total_count {
+            total_count
+        } else {
+            offset + capped_limit
+        };
+
+        // Build the result vector with the requested slice
+        let mut result = Vec::new(&env);
+        for i in offset..end {
+            result.push_back(contributors.get(i).unwrap());
+        }
+
+        result
+    }
 }
 
 #[cfg(test)]
