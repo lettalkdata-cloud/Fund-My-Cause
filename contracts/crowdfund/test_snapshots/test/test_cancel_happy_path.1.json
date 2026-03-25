@@ -505,6 +505,10 @@
                     "storage": [
                       {
                         "key": {
+                          "symbol": "ADMIN"
+                        },
+                        "val": {
+                          "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
                           "vec": [
                             {
                               "symbol": "ContributorCount"

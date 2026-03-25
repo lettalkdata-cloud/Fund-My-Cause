@@ -137,7 +137,7 @@ impl CrowdfundContract {
 
         if let Some(ref config) = platform_config {
             if config.fee_bps > 10_000 {
-                panic!("platform fee cannot exceed 100%");
+                return Err(ContractError::InvalidFee);
             }
             env.storage().instance().set(&KEY_PLATFORM, config);
         }
@@ -177,7 +177,7 @@ impl CrowdfundContract {
 
         let min: i128 = env.storage().instance().get(&KEY_MIN).unwrap();
         if amount < min {
-            panic!("amount below minimum");
+            return Err(ContractError::BelowMinimum);
         }
 
         let status: Status = env.storage().instance().get(&KEY_STATUS).unwrap();
