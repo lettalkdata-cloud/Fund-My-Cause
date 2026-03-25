@@ -184,6 +184,9 @@ impl CrowdfundContract {
         let empty: Vec<Address> = Vec::new(&env);
         env.storage().persistent().set(&KEY_CONTRIBS, &empty);
 
+        // Event: Campaign initialized
+        env.events().publish(("campaign", "initialized"), ());
+
         Ok(())
     }
 
@@ -329,6 +332,7 @@ impl CrowdfundContract {
             env.storage().instance().set(&KEY_SOCIAL, &l);
         }
 
+        // Event: Campaign metadata updated
         env.events().publish(("campaign", "metadata_updated"), ());
         Ok(())
     }
@@ -392,6 +396,9 @@ impl CrowdfundContract {
             token::Client::new(&env, &token_address)
                 .transfer(&env.current_contract_address(), &contributor, &amount);
             env.storage().persistent().set(&key, &0i128);
+
+            // Event: Contributor refunded with amount
+            env.events().publish(("campaign", "refunded"), (contributor, amount));
         }
         Ok(())
     }
