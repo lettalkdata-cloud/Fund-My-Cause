@@ -91,6 +91,7 @@ pub enum ContractError {
     GoalReached = 5,
     Overflow = 6,
     NotActive = 7,
+    InvalidDeadline = 8,
 }
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -266,6 +267,26 @@ impl CrowdfundContract {
         Ok(())
     }
 
+    /// Extend the campaign deadline (only forward, only while Active).
+    pub fn extend_deadline(env: Env, new_deadline: u64) -> Result<(), ContractError> {
+        let status: Status = env.storage().instance().get(&KEY_STATUS).unwrap();
+        if status != Status::Active {
+            return Err(ContractError::NotActive);
+        }
+
+        let creator: Address = env.storage().instance().get(&KEY_CREATOR).unwrap();
+        creator.require_auth();
+
+        let current_deadline: u64 = env.storage().instance().get(&KEY_DEADLINE).unwrap();
+        if new_deadline <= current_deadline {
+            return Err(ContractError::InvalidDeadline);
+        }
+
+        env.storage().instance().set(&KEY_DEADLINE, &new_deadline);
+        env.events().publish(("campaign", "deadline_extended"), new_deadline);
+        Ok(())
+    }
+
     /// Cancel a campaign before the deadline.
     pub fn cancel_campaign(env: Env) -> Result<(), ContractError> {
         let status: Status = env.storage().instance().get(&KEY_STATUS).unwrap();
@@ -360,7 +381,7 @@ impl CrowdfundContract {
     }
 
     pub fn platform_config(env: Env) -> Option<PlatformConfig> {
-        env.storage().instance().get(&DataKey::PlatformConfig)
+        env.storage().instance().get(&KEY_PLATFORM)
     }
 
     pub fn version(_env: Env) -> u32 {
