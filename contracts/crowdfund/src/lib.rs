@@ -95,6 +95,7 @@ pub enum ContractError {
     CampaignPaused = 9,
     InvalidFee = 10,
     BelowMinimum = 11,
+    InvalidGoal = 12,
 }
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -121,6 +122,16 @@ impl CrowdfundContract {
             return Err(ContractError::AlreadyInitialized);
         }
         creator.require_auth();
+
+        if goal <= 0 {
+            return Err(ContractError::InvalidGoal);
+        }
+        if deadline <= env.ledger().timestamp() {
+            return Err(ContractError::InvalidDeadline);
+        }
+        if min_contribution < 0 {
+            return Err(ContractError::BelowMinimum);
+        }
 
         if let Some(ref config) = platform_config {
             if config.fee_bps > 10_000 {
