@@ -6,7 +6,9 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
 import { ShareButton } from "@/components/ui/ShareButton";
 import { TransactionHistory } from "@/components/ui/TransactionHistory";
+import { XlmAmount } from "@/components/ui/XlmAmount";
 import { fetchCampaign } from "@/lib/soroban";
+import { fetchXlmPrice } from "@/lib/price";
 import { CampaignActions } from "./CampaignActions";
 
 // ── SEO ───────────────────────────────────────────────────────────────────────
@@ -46,6 +48,9 @@ export default async function CampaignDetailPage(
     notFound();
   }
 
+  // Fetch XLM price in parallel — null if CoinGecko is unavailable
+  const xlmPrice = await fetchXlmPrice();
+
   const progress = campaign.goal > 0 ? (campaign.raised / campaign.goal) * 100 : 0;
   const deadlinePassed = new Date(campaign.deadline) < new Date();
   const goalMet = campaign.raised >= campaign.goal;
@@ -81,8 +86,8 @@ export default async function CampaignDetailPage(
         <div className="space-y-2">
           <ProgressBar progress={progress} />
           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-            <span>{campaign.raised.toLocaleString()} XLM raised</span>
-            <span>{campaign.goal.toLocaleString()} XLM goal</span>
+            <span><XlmAmount xlm={campaign.raised} price={xlmPrice} /> raised</span>
+            <span><XlmAmount xlm={campaign.goal} price={xlmPrice} /> goal</span>
           </div>
         </div>
 
@@ -94,7 +99,7 @@ export default async function CampaignDetailPage(
           </div>
           <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-4">
             <p className="text-xl font-semibold">
-              {campaign.averageContribution.toLocaleString()} XLM
+              <XlmAmount xlm={campaign.averageContribution} price={xlmPrice} />
             </p>
             <p className="text-gray-500 text-xs mt-1">Avg. contribution</p>
           </div>
