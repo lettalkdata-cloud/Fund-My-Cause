@@ -403,6 +403,15 @@ export const buildWithdrawTx = (caller: string, contractId: string) =>
 export const buildCancelTx = (caller: string, contractId: string) =>
   buildSimpleContractTx(caller, contractId, "cancel_campaign");
 
+export async function buildRefundTx(
+  caller: string,
+  contractId: string,
+): Promise<string> {
+  return buildSimpleContractTx(caller, contractId, "refund_single", [
+    new Address(caller).toScVal(),
+  ]);
+}
+
 export async function buildUpdateMetadataTx(
   caller: string,
   contractId: string,

@@ -3,7 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { useWallet } from "@/context/WalletContext";
 import { PledgeModal } from "@/components/ui/PledgeModal";
-import { fetchContribution, type CampaignStatus } from "@/lib/soroban";
+import {
+  fetchContribution,
+  buildRefundTx,
+  submitSignedTx,
+  type CampaignStatus,
+} from "@/lib/soroban";
 
 interface Props {
   contractId: string;
@@ -22,12 +27,14 @@ export function CampaignActions({
   campaignTitle,
   status,
 }: Props) {
-  const { address, connect, networkMismatch } = useWallet();
+  const { address, connect, networkMismatch, signTx } = useWallet();
   const [pledging, setPledging] = useState(false);
   const [userContribution, setUserContribution] = useState(0);
+  const [refundClaimed, setRefundClaimed] = useState(false);
   const [txStatus, setTxStatus] = useState<
     "idle" | "pending" | "done" | "error"
   >("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (address) {
@@ -39,16 +46,41 @@ export function CampaignActions({
 
   const isCreator = !!address && address === creator;
   const canRefund =
-    !!address && deadlinePassed && !goalMet && userContribution > 0;
+    !!address &&
+    deadlinePassed &&
+    !goalMet &&
+    userContribution > 0 &&
+    !refundClaimed;
   const canWithdraw = isCreator && status === "Successful";
 
   async function handleRefund() {
+    if (!address) {
+      setErrorMessage("Please connect wallet first");
+      return;
+    }
+
     setTxStatus("pending");
+    setErrorMessage(null);
+
     try {
-      // TODO: invoke refund_single via Soroban RPC + Freighter signing
-      await new Promise((r) => setTimeout(r, 1500)); // placeholder
+      // Build the refund transaction
+      const unsignedXdr = await buildRefundTx(address, contractId);
+
+      // Sign with Freighter
+      const signedXdr = await signTx(unsignedXdr);
+
+      // Submit to network
+      await submitSignedTx(signedXdr);
+
+      setRefundClaimed(true);
       setTxStatus("done");
-    } catch {
+    } catch (err) {
+      console.error("Refund failed:", err);
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : "Transaction failed. Please try again.",
+      );
       setTxStatus("error");
     }
   }
@@ -62,6 +94,14 @@ export function CampaignActions({
     } catch {
       setTxStatus("error");
     }
+  }
+
+  if (txStatus === "done" && refundClaimed) {
+    return (
+      <p className="text-green-500 dark:text-green-400 text-center py-4 font-medium">
+        ✓ Refund of {userContribution.toLocaleString()} XLM claimed
+      </p>
+    );
   }
 
   if (txStatus === "done") {
@@ -112,7 +152,7 @@ export function CampaignActions({
 
         {txStatus === "error" && (
           <p className="text-red-500 dark:text-red-400 text-sm text-center">
-            Transaction failed. Please try again.
+            {errorMessage || "Transaction failed. Please try again."}
           </p>
         )}
       </div>
