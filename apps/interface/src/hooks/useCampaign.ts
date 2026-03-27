@@ -1,56 +1,30 @@
-"use client";
+import { useState, useEffect, useCallback } from "react";
+import { fetchCampaign, type CampaignData } from "@/lib/soroban";
 
-import { useCallback, useEffect, useState } from "react";
-import {
-  fetchCampaignView,
-  type CampaignInfo,
-  type CampaignStats,
-} from "@/lib/soroban";
-
-export function useCampaign(contractId: string): {
-  info: CampaignInfo | null;
-  stats: CampaignStats | null;
+interface UseCampaignResult {
+  info: CampaignData | null;
   loading: boolean;
   error: string | null;
   refresh: () => void;
-} {
-  const [info, setInfo] = useState<CampaignInfo | null>(null);
-  const [stats, setStats] = useState<CampaignStats | null>(null);
-  const [loading, setLoading] = useState(Boolean(contractId));
+}
+
+export function useCampaign(contractId: string): UseCampaignResult {
+  const [info, setInfo] = useState<CampaignData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    if (!contractId) {
-      setInfo(null);
-      setStats(null);
-      setError("Contract ID is required.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await fetchCampaignView(contractId);
-      setInfo(result.info);
-      setStats(result.stats);
-    } catch (err) {
-      setInfo(null);
-      setStats(null);
-      setError(err instanceof Error ? err.message : "Failed to load campaign.");
-    } finally {
-      setLoading(false);
-    }
-  }, [contractId]);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchCampaign(contractId)
+      .then((data) => { if (!cancelled) { setInfo(data); setLoading(false); } })
+      .catch((e: unknown) => { if (!cancelled) { setError(e instanceof Error ? e.message : String(e)); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, [contractId, tick]);
 
-  const refresh = useCallback(() => {
-    void load();
-  }, [load]);
+  const refresh = useCallback(() => setTick((t) => t + 1), []);
 
-  return { info, stats, loading, error, refresh };
+  return { info, loading, error, refresh };
 }

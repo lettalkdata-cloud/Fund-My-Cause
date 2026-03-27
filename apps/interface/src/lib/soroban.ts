@@ -160,23 +160,8 @@ function normalizeStatus(value: unknown): CampaignStatus {
     }
   }
 
-  return "Active";
-}
-
-function stroopsToXlm(value: bigint): number {
-  return Number(value) / 10_000_000;
-}
-
-function ledgerTimestampToIso(value: bigint): string {
-  return new Date(Number(value) * 1000).toISOString();
-}
-
-async function simulateView(
-  contractId: string,
-  method: string,
-  args: xdr.ScVal[] = [],
-) {
-  const rpc = new SorobanRpc.Server(SOROBAN_RPC_URL);
+async function simulateView(contractId: string, method: string, args: xdr.ScVal[] = []) {
+  const rpc = new SorobanRpc.Server(RPC_URL);
   const contract = new Contract(contractId);
   const account = new Account(Keypair.random().publicKey(), "0");
   const tx = new TransactionBuilder(account, {
