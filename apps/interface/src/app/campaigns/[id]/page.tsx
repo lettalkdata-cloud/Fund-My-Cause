@@ -5,6 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
 import { ShareButton } from "@/components/ui/ShareButton";
+import { TransactionHistory } from "@/components/ui/TransactionHistory";
 import { fetchCampaign } from "@/lib/soroban";
 import { CampaignActions } from "./CampaignActions";
 
@@ -105,6 +106,9 @@ export default async function CampaignDetailPage(
 
         {/* Description */}
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{campaign.description}</p>
+
+        {/* Transaction history */}
+        <TransactionHistory contractId={id} />
 
         {/* Share buttons */}
         <ShareButton campaignId={id} campaignTitle={campaign.title} />
