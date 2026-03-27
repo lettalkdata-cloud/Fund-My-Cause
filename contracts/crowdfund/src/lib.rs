@@ -90,16 +90,16 @@ pub enum ContractError {
     AlreadyInitialized = 1,
     CampaignEnded      = 2,
     CampaignStillActive = 3,
-    GoalNotReached     = 4,
-    GoalReached        = 5,
-    Overflow           = 6,
-    NotActive          = 7,
-    InvalidFee         = 8,
-    BelowMinimum       = 9,
-    InvalidDeadline    = 10,
-    CampaignPaused     = 11,
-    InvalidGoal        = 12,
-    TokenNotAccepted   = 13,
+    GoalNotReached = 4,
+    GoalReached = 5,
+    Overflow = 6,
+    NotActive = 7,
+    InvalidFee = 8,
+    BelowMinimum = 9,
+    InvalidDeadline = 10,
+    CampaignPaused = 11,
+    InvalidGoal = 12,
+    TokenNotAccepted = 13,
 }
 
 // ── Contract ──────────────────────────────────────────────────────────────────
@@ -160,6 +160,10 @@ impl CrowdfundContract {
         if let Some(links) = social_links {
             env.storage().instance().set(&KEY_SOCIAL, &links);
         }
+
+        env.storage().instance().set(&DataKey::ContributorCount, &0u32);
+        env.storage().instance().set(&DataKey::LargestContribution, &0i128);
+
         if let Some(tokens) = accepted_tokens {
             env.storage().instance().set(&DataKey::AcceptedTokens, &tokens);
         }
@@ -192,7 +196,7 @@ impl CrowdfundContract {
             return Err(ContractError::CampaignEnded);
         }
 
-        // Validate token against whitelist; fall back to default token
+        // Validate token against whitelist if one is set, otherwise fall back to default token
         let default_token: Address = env.storage().instance().get(&KEY_TOKEN).unwrap();
         if let Some(whitelist) = env.storage().instance().get::<_, Vec<Address>>(&DataKey::AcceptedTokens) {
             if !whitelist.contains(&token) {
@@ -238,6 +242,17 @@ impl CrowdfundContract {
             env.storage().instance().set(&DataKey::LargestContribution, &new_amount);
         }
 
+        let mut contributors: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&KEY_CONTRIBS)
+            .unwrap_or_else(|| Vec::new(&env));
+        if !contributors.contains(&contributor) {
+            contributors.push_back(contributor.clone());
+            env.storage().persistent().set(&KEY_CONTRIBS, &contributors);
+            env.storage().persistent().extend_ttl(&KEY_CONTRIBS, 100, 100);
+        }
+
         env.storage().instance().extend_ttl(17280, 518400);
         env.events().publish(("campaign", "contributed"), (contributor, amount));
         Ok(())
@@ -275,6 +290,13 @@ impl CrowdfundContract {
         };
 
         token_client.transfer(&env.current_contract_address(), &creator, &payout);
+
+        // Extend instance storage TTL after successful withdrawal.
+        // This ensures contract metadata remains accessible for historical reference
+        // and potential future interactions (e.g., viewing campaign results).
+        // Uses same TTL strategy as contribute: threshold 17280, extension 518400 ledgers.
+        env.storage().instance().extend_ttl(17280, 518400);
+
         env.storage().instance().set(&KEY_TOTAL, &0i128);
         env.storage().instance().set(&KEY_STATUS, &Status::Successful);
         env.storage().instance().extend_ttl(17280, 518400);
@@ -461,10 +483,10 @@ impl CrowdfundContract {
     }
 
     pub fn get_stats(env: Env) -> CampaignStats {
-        let total_raised: i128 = env.storage().instance().get(&KEY_TOTAL).unwrap_or(0);
-        let goal: i128 = env.storage().instance().get(&KEY_GOAL).unwrap();
         let contributor_count: u32 = env.storage().instance().get(&DataKey::ContributorCount).unwrap_or(0);
         let largest_contribution: i128 = env.storage().instance().get(&DataKey::LargestContribution).unwrap_or(0);
+        let total_raised: i128 = env.storage().instance().get(&KEY_TOTAL).unwrap_or(0);
+        let goal: i128 = env.storage().instance().get(&KEY_GOAL).unwrap();
 
         let progress_bps = if goal > 0 {
             let raw = (total_raised * 10_000) / goal;
@@ -495,11 +517,19 @@ impl CrowdfundContract {
         let goal: i128 = env.storage().instance().get(&KEY_GOAL).unwrap();
         let deadline: u64 = env.storage().instance().get(&KEY_DEADLINE).unwrap();
         let min_contribution: i128 = env.storage().instance().get(&KEY_MIN).unwrap();
-        let title: String = env.storage().instance().get(&KEY_TITLE)
+        let title: String = env.storage()
+            .instance()
+            .get(&KEY_TITLE)
             .unwrap_or_else(|| String::from_str(&env, ""));
-        let description: String = env.storage().instance().get(&KEY_DESC)
+        let description: String = env.storage()
+            .instance()
+            .get(&KEY_DESC)
             .unwrap_or_else(|| String::from_str(&env, ""));
         let status: Status = env.storage().instance().get(&KEY_STATUS).unwrap();
+        
+        let platform_config: Option<PlatformConfig> = env.storage()
+            .instance()
+            .get(&KEY_PLATFORM);
 
         let (has_platform_config, platform_fee_bps, platform_address) =
             if let Some(config) = env.storage().instance().get::<_, PlatformConfig>(&KEY_PLATFORM) {
